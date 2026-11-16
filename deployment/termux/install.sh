@@ -68,6 +68,9 @@ say "Installing run scripts"
 cp "$REPO_DIR/deployment/termux/mf-run.sh"   "$HOME/mf-run.sh"
 cp "$REPO_DIR/deployment/termux/mfmproxy.py" "$HOME/mfmproxy.py"
 chmod +x "$HOME/mf-run.sh"
+# 'mf' management command (mf start|stop|restart|status|update|log)
+cp "$REPO_DIR/deployment/termux/mf" "$PREFIX/bin/mf"
+chmod +x "$PREFIX/bin/mf"
 # boot autostart (needs the Termux:Boot app installed)
 mkdir -p "$HOME/.termux/boot"
 cp "$REPO_DIR/deployment/termux/start-mediafusion.sh" "$HOME/.termux/boot/start-mediafusion.sh" 2>/dev/null || true

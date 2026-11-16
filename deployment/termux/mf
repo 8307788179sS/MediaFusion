@@ -1,0 +1,53 @@
+#!/data/data/com.termux/files/usr/bin/bash
+#  mf — manage the local MediaFusion Stremio addon.
+#  Commands:  mf start | stop | restart | status | update | log
+PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
+REPO_DIR="${REPO_DIR:-$HOME/MediaFusion}"
+
+_lan_ip() { ifconfig 2>/dev/null | awk '/inet /{print $2}' \
+  | grep -E '^(192\.168|10\.|172\.)' | head -n1; }
+_running() { ps -A -o ARGS 2>/dev/null | grep -q '[m]ediafusion-api'; }
+
+_stop() {
+  pkill -9 -f mf-run.sh     2>/dev/null
+  pkill -9 -f mediafusion-api 2>/dev/null
+  pkill -9 -f mfmproxy.py   2>/dev/null
+}
+
+case "${1:-}" in
+  start)
+    if _running; then echo "already running."; else
+      nohup bash "$HOME/mf-run.sh" > "$HOME/mf-run.log" 2>&1 &
+      sleep 7
+    fi
+    "$0" status
+    ;;
+  stop)
+    _stop; echo "stopped."
+    ;;
+  restart)
+    _stop; sleep 3
+    nohup bash "$HOME/mf-run.sh" > "$HOME/mf-run.log" 2>&1 &
+    sleep 7
+    "$0" status
+    ;;
+  status)
+    if _running; then
+      echo "addon: running"
+      echo "This device:  http://127.0.0.1:8001/manifest.json"
+      ip="$(_lan_ip)"; [ -n "$ip" ] && echo "WiFi devices: http://$ip:8001/manifest.json"
+    else
+      echo "addon: stopped   (start it:  mf start)"
+    fi
+    ;;
+  update)
+    echo "updating + rebuilding (this takes a while)..."
+    cd "$REPO_DIR" && git pull --ff-only && bash deployment/termux/install.sh
+    ;;
+  log)
+    tail -n 40 "$HOME/mf-run.log" 2>/dev/null || echo "no log yet."
+    ;;
+  *)
+    echo "usage: mf {start|stop|restart|status|update|log}"
+    ;;
+esac
