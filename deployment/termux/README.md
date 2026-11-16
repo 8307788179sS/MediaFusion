@@ -1,84 +1,59 @@
-# MediaFusion — token-less local addon on Termux (WiFi/LAN)
+# MediaFusion on Android (Termux) — local Stremio addon
 
-Run MediaFusion as a **local Stremio addon** on an Android tablet/phone via Termux,
-reachable from any device on the **same WiFi**, with **no token** in the manifest URL.
+Run MediaFusion as a **local, token-less Stremio addon** on an Android phone or
+tablet. No account, no payment, no server in the cloud — it runs on the device.
 
-## Why "no token" already works
+## What you need first
 
-The Rust backend exposes **public, token-less routes** out of the box:
+1. **Termux** — install from **F-Droid** (not the Play Store; that version is old).
+2. **Stremio** — install the Stremio app on the same device.
 
-| Route                              | Purpose                          |
-|------------------------------------|----------------------------------|
-| `GET /manifest.json`               | manifest with `UserData::default` |
-| `GET /stream/movie/{id}`           | public movie streams             |
-| `GET /stream/series/{id}`          | public series streams            |
-| `GET /stream/tv/{id}`              | public live-TV streams           |
-| `GET /catalog/...`, `/meta/...`    | public catalog + metadata        |
+## Install (one time)
 
-So you install the **plain** URL (no `secret_str` path segment):
-
-```
-http://<tablet-LAN-IP>:8000/manifest.json
-```
-
-No code change is needed for token-less use — these routes already exist in
-`backend/src/routes/*` and are wired in `backend/src/routes/mod.rs`.
-
-## Setup
-
-On the tablet, in Termux:
+Open **Termux** and run:
 
 ```bash
 pkg install -y git
 git clone https://github.com/8307788179sS/MediaFusion.git
 cd MediaFusion
-bash deployment/termux/setup-local.sh
+bash deployment/termux/install.sh
 ```
 
-The script installs PostgreSQL + Redis + Rust, creates the database, applies
-migrations, builds `mediafusion-api`, and runs it bound to `0.0.0.0:8000`.
+The installer handles everything:
 
-Then, in **Stremio on the same WiFi**, add the addon:
+- installs PostgreSQL, Redis, the Rust toolchain and Python
+- applies the local-mode patches (live search on, addon installs cleanly)
+- builds the backend with **native-tls** and a low-memory profile
+- starts the API (`:8000`) behind a small manifest proxy (`:8001`)
+
+> ⚠️ The first build takes **20–40 minutes** and the device gets warm — keep it
+> **plugged in** and the screen on. This happens only once.
+
+## Add it in Stremio
+
+On the **same device**, in Stremio → **Add-ons** → paste:
 
 ```
-http://<tablet-LAN-IP>:8000/manifest.json
+http://127.0.0.1:8001/manifest.json
 ```
 
-(The script prints your detected LAN IP when it starts.)
+Install it, open a movie or series, and scroll to the **MediaFusion Local**
+streams. For faster playback pick **720p/1080p** with **more seeders** (👤).
 
-### Useful overrides
+## Restart later / after reboot
 
 ```bash
-LAN_IP=192.168.1.43 STREAM_RS_PORT=8000 bash deployment/termux/setup-local.sh
+bash ~/mf-run.sh &
 ```
 
-Keep the device awake while streaming:
+For automatic start on boot, install the **Termux:Boot** app (F-Droid) and open
+it once — the installer already placed the boot script in `~/.termux/boot/`.
 
-```bash
-termux-wake-lock
-```
+## Good to know
 
-## Honest limitations (read these)
-
-1. **Public mode = non-debrid streams only.** Debrid providers (Real-Debrid,
-   AllDebrid, Torbox…) need *their* account keys — a token-less manifest cannot
-   provide them. For debrid you must use a configured `/{secret_str}/manifest.json`.
-2. **Content is not built in.** Streams appear only once the database is populated
-   by scrapers/indexers (Prowlarr/Jackett/Torrentio/etc.). A fresh DB returns empty
-   results. Configure indexers via the `/configure` page or the worker jobs.
-3. **Torrent playback** needs a Stremio build / external player that can handle the
-   stream type on Android.
-4. **First build is slow.** Compiling a large Rust project on a tablet can take a
-   long time and significant RAM. A `--release` binary is produced once, then reused.
-5. **LAN only.** This binds to your private network. Do **not** expose port 8000 to
-   the public internet without auth in front of it.
-
-## Required environment (set automatically by the script)
-
-| Var              | Default                                                        |
-|------------------|----------------------------------------------------------------|
-| `SECRET_KEY`     | random 32-char string (any string works; padded to 32 bytes)   |
-| `POSTGRES_URI`   | `postgresql://mediafusion:mediafusion@127.0.0.1:5432/mediafusion` |
-| `REDIS_URL`      | `redis://127.0.0.1:6379`                                        |
-| `STREAM_RS_PORT` | `8000`                                                          |
-| `HOST_URL`       | `http://<LAN-IP>:8000`                                          |
+- MediaFusion streams are **torrents (P2P)**, so playback starts slower than a
+  direct-stream addon. That is the nature of torrents, not a bug.
+- For instant, direct playback use a direct-stream addon instead; MediaFusion is
+  best as a **large fallback library** with many qualities and languages.
+- Everything is local to the device. Other devices on the same WiFi can use
+  `http://<device-LAN-IP>:8001/manifest.json`.
