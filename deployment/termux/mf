@@ -6,7 +6,7 @@ REPO_DIR="${REPO_DIR:-$HOME/MediaFusion}"
 
 _lan_ip() { ifconfig 2>/dev/null | awk '/inet /{print $2}' \
   | grep -E '^(192\.168|10\.|172\.)' | head -n1; }
-_running() { ps -A -o ARGS 2>/dev/null | grep -q '[m]ediafusion-api'; }
+_running() { python3 -c "import socket,sys;s=socket.socket();s.settimeout(2);sys.exit(0 if s.connect_ex(('127.0.0.1',8001))==0 else 1)" 2>/dev/null; }
 
 _stop() {
   pkill -9 -f mf-run.sh     2>/dev/null
