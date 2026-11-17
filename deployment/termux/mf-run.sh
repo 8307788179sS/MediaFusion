@@ -11,7 +11,16 @@ export SECRET_KEY="mediafusionlocalfixedsecret00000"
 export POSTGRES_URI="postgresql://mediafusion:mediafusion@127.0.0.1:5432/mediafusion"
 export REDIS_URL="redis://127.0.0.1:6379"
 export STREAM_RS_PORT="8000"
-export HOST_URL="http://127.0.0.1:8001"
+# Address other devices use to reach this phone. Auto-detects the WiFi/LAN IP;
+# override with MF_HOST=192.168.x.y. Falls back to 127.0.0.1 (this device only).
+detect_lan_ip() {
+  { ifconfig 2>/dev/null || ip -4 addr 2>/dev/null; } \
+    | grep -oE 'inet (addr:)?([0-9]+\.){3}[0-9]+' | grep -oE '([0-9]+\.){3}[0-9]+' \
+    | grep -vE '^127\.' | grep -E '^(192\.168|10\.|172\.(1[6-9]|2[0-9]|3[01]))' | head -n1
+}
+MF_HOST="${MF_HOST:-$(detect_lan_ip)}"
+MF_HOST="${MF_HOST:-127.0.0.1}"
+export HOST_URL="http://$MF_HOST:8001"
 export ADDON_NAME="MediaFusion Local"
 export SQLX_OFFLINE=true
 export RUST_LOG="info"
@@ -38,13 +47,20 @@ pkill -f mfmproxy.py 2>/dev/null || true
 sleep 1
 nohup python3 "$HOME/mfmproxy.py" > "$HOME/mfmproxy.log" 2>&1 &
 
+# TV cache cleaner (hourly + after TV reboot). Needs: pkg install android-tools
+if command -v adb >/dev/null 2>&1 && [ -f "$HOME/tv-cache-clean.sh" ]; then
+  pkill -f tv-cache-clean.sh 2>/dev/null || true
+  nohup bash "$HOME/tv-cache-clean.sh" >> "$HOME/tv-cache-clean.log" 2>&1 &
+fi
+
 BIN="$REPO_DIR/backend/target/release/mediafusion-api"
 if [ ! -x "$BIN" ]; then
   echo "[mf-run] binary not found at $BIN — run the installer first."
   exit 1
 fi
 
-echo "[mf-run] addon URL: http://127.0.0.1:8001/manifest.json"
+echo "[mf-run] addon URL (this phone): http://127.0.0.1:8001/manifest.json"
+echo "[mf-run] addon URL (LAN):        $HOST_URL/manifest.json"
 while true; do
   echo "[mf-run] starting addon at $(date)"
   "$BIN"

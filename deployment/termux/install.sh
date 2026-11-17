@@ -23,7 +23,7 @@ say() { printf '\n\033[1;35m==> %s\033[0m\n' "$*"; }
 say "Installing packages (one-time, ~250 MB)"
 pkg update -y
 pkg install -y rust postgresql redis git clang make pkg-config openssl \
-               binutils python ca-certificates
+               binutils python ca-certificates android-tools
 
 # 2 ── libgcc shim (fixes the Termux '-lgcc not found' linker error) ──────────
 say "Adding libgcc shim"
@@ -67,7 +67,8 @@ say "Building MediaFusion (first build is slow — keep the device charging)"
 say "Installing run scripts"
 cp "$REPO_DIR/deployment/termux/mf-run.sh"   "$HOME/mf-run.sh"
 cp "$REPO_DIR/deployment/termux/mfmproxy.py" "$HOME/mfmproxy.py"
-chmod +x "$HOME/mf-run.sh"
+cp "$REPO_DIR/deployment/termux/tv-cache-clean.sh" "$HOME/tv-cache-clean.sh"
+chmod +x "$HOME/mf-run.sh" "$HOME/tv-cache-clean.sh"
 # 'mf' management command (mf start|stop|restart|status|update|log)
 cp "$REPO_DIR/deployment/termux/mf" "$PREFIX/bin/mf"
 chmod +x "$PREFIX/bin/mf"

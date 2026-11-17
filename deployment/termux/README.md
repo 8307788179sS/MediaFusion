@@ -49,6 +49,23 @@ bash ~/mf-run.sh &
 For automatic start on boot, install the **Termux:Boot** app (F-Droid) and open
 it once — the installer already placed the boot script in `~/.termux/boot/`.
 
+## Android TV on the same WiFi (optional)
+
+Stremio only accepts plain-`http` addons on `127.0.0.1`, so a LAN address like
+`http://192.168.1.x:8001` fails with "failed to fetch". `tv-cache-clean.sh`
+(started by `mf-run.sh` when `adb` is installed) handles this over adb:
+
+- keeps the TV's `127.0.0.1:8001` tunnelled to this device (`adb reverse`), so
+  install `http://127.0.0.1:8001/manifest.json` in Stremio on the TV too
+- clears the TV's app caches every hour and after each TV reboot
+  (`pm trim-caches`: cache only — Stremio login/addons stay), skipping while
+  something is playing
+
+One-time: enable network debugging on the TV, then in Termux
+`adb connect <TV_IP>:5555` and accept the prompt on the TV ("Always allow").
+Set `TV=<ip>:5555` if your TV is not `192.168.1.33`. Log: `~/tv-cache-clean.log`.
+TV debugging must stay enabled for this to work.
+
 ## Good to know
 
 - MediaFusion streams are **torrents (P2P)**, so playback starts slower than a
